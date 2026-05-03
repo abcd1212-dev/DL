@@ -1,4 +1,4 @@
-# Import Sequential model from Keras 
+# Import Sequential model from Keras
 # Sequential model is used when layers are arranged one after another
 from tensorflow.keras.models import Sequential
 
@@ -9,15 +9,13 @@ from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Dense, Flatten, Input
 
 # Import Fashion-MNIST dataset
-# It is an inbuilt dataset available in Keras
-# Contains images of clothes like shirts, shoes, bags etc.
+# Contains grayscale images of clothing items (10 classes)
 from tensorflow.keras.datasets import fashion_mnist
 
-# Import matplotlib for plotting graphs
+# Import matplotlib for graphs
 import matplotlib.pyplot as plt
 
-# Import plot_model function
-# Used to display model diagram visually (required for part b)
+# Import plot_model for visualization
 from tensorflow.keras.utils import plot_model
 
 
@@ -29,63 +27,63 @@ from tensorflow.keras.utils import plot_model
 (X_train, y_train), (X_test, y_test) = fashion_mnist.load_data()
 
 
-# Dataset images contain pixel values from 0 to 255
-# Normalize values into range 0 to 1
-# This improves speed and accuracy of training
+# Normalize pixel values from 0–255 to 0–1
 X_train = X_train / 255.0
 X_test = X_test / 255.0
 
 
-# Create empty Sequential model
+# Create Sequential model
 model = Sequential()
 
 
-# Input layer
-# Each image size is 28 rows × 28 columns
+# Input layer (28x28 image)
 model.add(Input(shape=(28,28)))
 
 
-# Flatten layer
-# Converts 28x28 matrix into single vector of 784 values
-# Neural network Dense layer needs 1D input
+# Flatten layer (convert 2D → 1D)
 model.add(Flatten())
 
 
-# First Hidden Layer
-# 128 neurons are used
-# ReLU activation removes negative values
-# Helps model learn complex patterns
+# First hidden layer (128 neurons, ReLU activation)
 model.add(Dense(128, activation='relu'))
 
 
-# Second Hidden Layer
-# 64 neurons used
-# Learns deeper features from previous layer
+# Second hidden layer (64 neurons, ReLU activation)
 model.add(Dense(64, activation='relu'))
 
 
-# Output Layer
-# 10 neurons because dataset has 10 classes
-# Softmax converts output into probabilities
-# Highest probability becomes final prediction
+# Output layer (10 classes, Softmax activation)
 model.add(Dense(10, activation='softmax'))
 
 
 # Compile model
-# optimizer='adam' updates weights efficiently
-# loss function checks prediction error
-# accuracy used to measure correct predictions
+# optimizer → updates weights
+# loss → calculates error
+# accuracy → performance metric
 model.compile(optimizer='adam',
               loss='sparse_categorical_crossentropy',
               metrics=['accuracy'])
 
 
-# Display complete model structure
-# Shows layer names, shapes and parameters
+# Display model summary (text format)
 model.summary()
 
 
-# Plot graphical structure of model
+# Train model
+# epochs = number of times data passes through model
+# validation_split = 20% data used for validation
+history = model.fit(X_train, y_train,
+                    epochs=10,
+                    validation_split=0.2)
+
+
+# Evaluate model on test data
+loss, accuracy = model.evaluate(X_test, y_test)
+
+print("\nTest Accuracy:", accuracy)
+
+
+# Plot model architecture
 # show_shapes=True shows input and output dimensions
 # show_layer_names=True shows names of layers
 plot_model(model,
@@ -93,22 +91,7 @@ plot_model(model,
            show_layer_names=True)
 
 
-# Train the model
-# epochs=20 means complete dataset passes through model 20 times
-# validation_split=0.1 means 10% training data used for validation
-history = model.fit(X_train, y_train,
-                    epochs=20,
-                    validation_split=0.1)
-
-
-# Evaluate model using test dataset
-# Gives final loss and accuracy
-loss, accuracy = model.evaluate(X_test, y_test)
-
-print("Test Accuracy:", accuracy)
-
-
-# Plot graph of training accuracy and validation accuracy
+# Plot Accuracy Graph
 plt.plot(history.history['accuracy'])
 plt.plot(history.history['val_accuracy'])
 
@@ -117,4 +100,8 @@ plt.xlabel("Epoch Number")
 plt.ylabel("Accuracy")
 plt.legend(["Training", "Validation"])
 
-plt.show()          
+plt.show()
+
+from tensorflow.keras.utils import plot_model
+     
+plot_model(model, show_shapes=True, show_layer_names=True)
