@@ -1,3 +1,4 @@
+#XOR 
 import numpy as np
 
 # Sigmoid activation function → converts values to 00range (0,1)
@@ -52,3 +53,53 @@ for _ in range(10000):
 # Final prediction
 print("Final Output:")
 print(o)
+
+
+
+
+# AND Gate (Perceptron)
+import numpy as np  # used for consistency (not really needed here)
+
+# Step activation function
+# Returns 1 if input >= 0, otherwise 0
+step = lambda x: 1 if x >= 0 else 0
+
+# Function to implement AND gate
+def AND(x1, x2):
+    w1, w2 = 1, 1        # weights for both inputs
+    bias = -1.5          # bias shifts decision boundary
+
+    # weighted sum (net input)
+    net = x1*w1 + x2*w2 + bias
+
+    # apply activation function
+    return step(net)
+
+# Testing all input combinations
+for x1 in [0,1]:
+    for x2 in [0,1]:
+        print(x1, x2, "->", AND(x1,x2))  # print result
+
+
+#OR Gate Perceptron
+
+import numpy as np
+
+# Step activation function
+step = lambda x: 1 if x >= 0 else 0
+
+# Function to implement OR gate
+def OR(x1, x2):
+    w1, w2 = 1, 1        # weights
+    bias = -0.5          # lower threshold than AND
+
+    # weighted sum
+    net = x1*w1 + x2*w2 + bias
+
+    # activation
+    return step(net)
+
+# Testing all combinations
+for x1 in [0,1]:
+    for x2 in [0,1]:
+        print(x1, x2, "->", OR(x1,x2))
