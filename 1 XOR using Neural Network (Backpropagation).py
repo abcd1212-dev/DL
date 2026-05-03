@@ -62,104 +62,57 @@ lr = 0.1
 # Run network 10000 times to learn XOR pattern
 for epoch in range(10000):
 
-
     # Hidden Layer Calculation
     # Multiply input matrix X with weights w1
     # Then apply sigmoid activation
-    # @ means matrix multiplication
     h = sig(X @ w1)
-
 
     # Output Layer Calculation
     # Multiply hidden output h with weights w2
     # Then apply sigmoid activation
-    # Gives final predicted output
     o = sig(h @ w2)
-
 
     # Output Layer Error
     # (Actual output - Predicted output)
-    # Multiply with derivative of sigmoid
-    # Used to know how much correction needed
     d2 = (y - o) * dsig(o)
 
-
     # Hidden Layer Error
-    # Backpropagate output error to hidden layer
-    # w2.T = transpose of w2
-    # Multiply with derivative of hidden layer output
+    # Backpropagate error to hidden layer
     d1 = d2 @ w2.T * dsig(h)
 
-
-    # Update weights from Hidden to Output layer
-    # h.T = transpose of hidden output
-    # Weight change = hidden_output × error × learning rate
+    # Update weights (Hidden → Output)
     w2 += h.T @ d2 * lr
 
-
-    # Update weights from Input to Hidden layer
-    # X.T = transpose of input matrix
-    # Weight change = input × hidden_error × learning rate
+    # Update weights (Input → Hidden)
     w1 += X.T @ d1 * lr
 
 
 # Print final predicted decimal outputs
 print("\n===== XOR OUTPUT =====")
-print("Final Predicted Output:")
 print(o)
 
 
 # Convert decimal outputs into binary values
-# If output >= 0.5 then 1
-# Else 0
+# If output >= 0.5 then 1 else 0
 binary_output = (o >= 0.5).astype(int)
 
-
-# Print final binary XOR answers
 print("\nBinary Output:")
-
 for i, val in enumerate(binary_output):
     print(X[i], "->", val[0])
 
 
-
-# AND Gate (Perceptron)
-import numpy as np  # used for consistency (not really needed here)
+# ================= McCulloch–Pitts Model =================
 
 # Step activation function
-# Returns 1 if input >= 0, otherwise 0
+# Returns 1 if input >= 0 else 0
 step = lambda x: 1 if x >= 0 else 0
 
-# Function to implement AND gate
-def AND(x1, x2):
-    w1, w2 = 1, 1        # weights for both inputs
-    bias = -1.5          # bias shifts decision boundary
 
-    # weighted sum (net input)
-    net = x1*w1 + x2*w2 + bias
-
-    # apply activation function
-    return step(net)
-
-print("\n===== AND GATE =====")
-
-# Testing all input combinations
-for x1 in [0,1]:
-    for x2 in [0,1]:
-        print(x1, x2, "->", AND(x1,x2))  # print result
-
-
-#OR Gate Perceptron
-
-import numpy as np
-
-# Step activation function
-step = lambda x: 1 if x >= 0 else 0
-
-# Function to implement OR gate
-def OR(x1, x2):
+# McCulloch–Pitts AND Gate
+# Uses fixed weights (no learning)
+def MP_AND(x1, x2):
     w1, w2 = 1, 1        # weights
-    bias = -0.5          # lower threshold than AND
+    bias = -1.5          # threshold
 
     # weighted sum
     net = x1*w1 + x2*w2 + bias
@@ -167,9 +120,75 @@ def OR(x1, x2):
     # activation
     return step(net)
 
+
+print("\n===== McCulloch–Pitts AND Gate =====")
+
+for x1 in [0,1]:
+    for x2 in [0,1]:
+        print(x1, x2, "->", MP_AND(x1,x2))
+
+
+# ================= Perceptron Model =================
+
+# Expected AND Output
+y_and = np.array([0, 0, 0, 1])
+
+
+# Initialize weights and bias
+# Random values (will be learned)
+w = np.random.rand(2)
+b = np.random.rand()
+
+
+# Learning rate
+lr = 0.1
+
+
+# Training perceptron
+# Updates weights based on error
+for epoch in range(10):
+
+    for i in range(len(X)):
+
+        # weighted sum
+        net = np.dot(X[i], w) + b
+
+        # prediction using step function
+        pred = step(net)
+
+        # error calculation
+        error = y_and[i] - pred
+
+        # update weights
+        w += lr * error * X[i]
+
+        # update bias
+        b += lr * error
+
+
+print("\n===== Perceptron AND Gate =====")
+
+for i in range(len(X)):
+    net = np.dot(X[i], w) + b
+    print(X[i], "->", step(net))
+
+
+# ================= OR Gate =================
+
+# OR Gate using step function
+def OR(x1, x2):
+    w1, w2 = 1, 1        # weights
+    bias = -0.5          # threshold
+
+    # weighted sum
+    net = x1*w1 + x2*w2 + bias
+
+    # activation
+    return step(net)
+
+
 print("\n===== OR GATE =====")
 
-# Testing all combinations
 for x1 in [0,1]:
     for x2 in [0,1]:
         print(x1, x2, "->", OR(x1,x2))
