@@ -1,175 +1,204 @@
-# IMPORT LIBRARIES
+# STEP 1: IMPORT LIBRARIES
+# TensorFlow/Keras → build neural networks
+# NumPy → numerical operations
+# Matplotlib → visualization
 
-# TensorFlow → used for building deep learning models
 import tensorflow as tf
-
-# Keras layers → used to define neural network layers
-from tensorflow.keras import layers
-
-# NumPy → used for random number generation and array handling
+from tensorflow.keras import layers, models, optimizers
 import numpy as np
-
-# Matplotlib → used to display generated images
 import matplotlib.pyplot as plt
 
-
-# LOAD MNIST DATASET
-
-# MNIST contains handwritten digit images (28x28 pixels)
-# Labels are ignored (_) because GAN is unsupervised
-(X_train, _), _ = tf.keras.datasets.mnist.load_data()
+# Set random seed so results are reproducible
+tf.random.set_seed(42)
+np.random.seed(42)
 
 
-# NORMALIZE DATA
+# STEP 2: LOAD AND PREPROCESS MNIST DATASET
 
-# Convert pixel values from [0,255] → [-1,1]
-# This is required because generator uses tanh activation
-# Matching ranges improves training stability
-X_train = (X_train - 127.5) / 127.5
+# Load dataset → returns (train_images, train_labels), (test_images, test_labels)
+# We only need images, so labels are ignored using "_"
+(X_train, _), (_, _) = tf.keras.datasets.mnist.load_data()
 
+# Normalize pixel values from [0,255] to [-1,1]
+# GAN works better when data is centered around 0
+X_train = (X_train.astype('float32') - 127.5) / 127.5
 
-# RESHAPE DATA
-
-# Convert shape from (28,28) → (28,28,1)
-# Channel dimension is required for neural networks
+# Reshape to (28,28,1) → grayscale image format
 X_train = X_train.reshape(-1, 28, 28, 1)
 
 
-# GENERATOR MODEL
-
+# STEP 3: BUILD GENERATOR
 # Generator takes random noise and generates fake images
-def build_generator():
-    model = tf.keras.Sequential([
 
-        # Input: random noise vector of size 100
-        layers.Dense(128, activation='relu', input_shape=(100,)),
+def build_generator(latent_dim):
 
-        # Output layer: produces 784 values (28x28 image flattened)
-        # tanh activation outputs values in [-1,1]
-        layers.Dense(784, activation='tanh'),
+    model = models.Sequential()
 
-        # Reshape flattened output into image format (28x28x1)
-        layers.Reshape((28, 28, 1))
-    ])
+    # Input: random noise vector
+    model.add(layers.Input(shape=(latent_dim,)))
+
+    # Hidden layers → learn patterns
+    model.add(layers.Dense(256, activation='relu'))
+    model.add(layers.Dense(512, activation='relu'))
+
+    # Output layer → 784 values (28x28 image)
+    model.add(layers.Dense(28 * 28, activation='tanh'))
+
+    # Convert flat vector → image
+    model.add(layers.Reshape((28, 28, 1)))
+
     return model
 
 
-# DISCRIMINATOR MODEL
+# STEP 4: BUILD DISCRIMINATOR
+# Discriminator classifies image as REAL (1) or FAKE (0)
 
-# Discriminator checks whether image is real or fake
 def build_discriminator():
-    model = tf.keras.Sequential([
 
-        # Flatten image into vector for processing
-        layers.Flatten(input_shape=(28, 28, 1)),
+    model = models.Sequential()
 
-        # Dense layer learns features from image
-        layers.Dense(128, activation='relu'),
+    # Convert image to vector
+    model.add(layers.Flatten(input_shape=(28, 28, 1)))
 
-        # Output layer: sigmoid gives probability (0=fake, 1=real)
-        layers.Dense(1, activation='sigmoid')
-    ])
+    # Hidden layers
+    model.add(layers.Dense(512, activation='relu'))
+    model.add(layers.Dense(256, activation='relu'))
+
+    # Output → probability
+    model.add(layers.Dense(1, activation='sigmoid'))
+
+    # GAN-specific optimizer
+    optimizer = optimizers.Adam(learning_rate=0.0002, beta_1=0.5)
+
+    model.compile(loss='binary_crossentropy',
+                  optimizer=optimizer,
+                  metrics=['accuracy'])
+
     return model
 
 
-# CREATE MODELS
+# STEP 5: BUILD GAN (COMBINED MODEL)
+# Generator + Discriminator
+# Discriminator is frozen during generator training
 
-generator = build_generator()
-discriminator = build_discriminator()
+def build_gan(generator, discriminator, latent_dim):
 
-
-# COMPILE DISCRIMINATOR
-
-# Binary crossentropy is used for real vs fake classification
-discriminator.compile(optimizer='adam', loss='binary_crossentropy')
-
-
-# BUILD GAN MODEL
-
-# Freeze discriminator during GAN training
-# Only generator will be trained in GAN step
-discriminator.trainable = False
-
-# Input to GAN is random noise
-gan_input = tf.keras.Input(shape=(100,))
-
-# Generator creates fake image
-fake_image = generator(gan_input)
-
-# Discriminator evaluates fake image
-gan_output = discriminator(fake_image)
-
-# Combine into one GAN model
-gan = tf.keras.Model(gan_input, gan_output)
-
-# Compile GAN
-gan.compile(optimizer='adam', loss='binary_crossentropy')
-
-
-# TRAINING LOOP
-
-epochs = 1000
-batch_size = 32
-
-for epoch in range(epochs):
-
-    # -------------------------
-    # STEP 1: TRAIN DISCRIMINATOR
-    # -------------------------
-
-    # Select random real images
-    idx = np.random.randint(0, X_train.shape[0], batch_size)
-    real_images = X_train[idx]
-
-    # Generate fake images from random noise
-    noise = np.random.normal(0, 1, (batch_size, 100))
-    fake_images = generator.predict(noise, verbose=0)
-
-    # Enable discriminator training
-    discriminator.trainable = True
-
-    # Train on real images (label = 1)
-    d_loss_real = discriminator.train_on_batch(
-        real_images,
-        np.ones((batch_size, 1))
-    )
-
-    # Train on fake images (label = 0)
-    d_loss_fake = discriminator.train_on_batch(
-        fake_images,
-        np.zeros((batch_size, 1))
-    )
-
-    # -------------------------
-    # STEP 2: TRAIN GENERATOR
-    # -------------------------
-
-    # Freeze discriminator
     discriminator.trainable = False
 
-    # Generate new noise
-    noise = np.random.normal(0, 1, (batch_size, 100))
+    gan_input = tf.keras.Input(shape=(latent_dim,))
+    fake_image = generator(gan_input)
+    gan_output = discriminator(fake_image)
 
-    # Generator tries to fool discriminator → label = 1
-    g_loss = gan.train_on_batch(
-        noise,
-        np.ones((batch_size, 1))
-    )
+    model = tf.keras.Model(gan_input, gan_output)
 
-    # Print progress every 200 epochs
-    if epoch % 200 == 0:
-        print("Epoch:", epoch, "D Loss:", d_loss_real, "G Loss:", g_loss)
+    optimizer = optimizers.Adam(learning_rate=0.0002, beta_1=0.5)
+
+    model.compile(loss='binary_crossentropy', optimizer=optimizer)
+
+    return model
 
 
-# GENERATE SAMPLE IMAGE
+# STEP 6: HELPER FUNCTIONS
 
-# Create random noise
-noise = np.random.normal(0, 1, (1, 100))
+# Get real images
+def generate_real_samples(n_samples):
+    idx = np.random.randint(0, X_train.shape[0], n_samples)
+    X = X_train[idx]
+    y = np.ones((n_samples, 1))  # label = real
+    return X, y
 
-# Generate fake image
-gen_img = generator.predict(noise, verbose=0)
 
-# Display generated image
-plt.imshow(gen_img[0, :, :, 0], cmap='gray')
-plt.title("Generated Image")
+# Generate random noise
+def generate_latent_points(latent_dim, n_samples):
+    return np.random.randn(n_samples, latent_dim)
+
+
+# STEP 7: TRAIN GAN
+
+def train_gan(generator, discriminator, gan_model,
+              latent_dim, epochs=1000, batch_size=64):
+
+    half_batch = batch_size // 2
+
+    d_losses = []
+    g_losses = []
+
+    for epoch in range(epochs):
+
+        # Train Discriminator
+
+        X_real, y_real = generate_real_samples(half_batch)
+
+        noise = generate_latent_points(latent_dim, half_batch)
+        X_fake = generator.predict(noise, verbose=0)
+        y_fake = np.zeros((half_batch, 1))
+
+        discriminator.trainable = True
+
+        d_loss_real, _ = discriminator.train_on_batch(X_real, y_real)
+        d_loss_fake, _ = discriminator.train_on_batch(X_fake, y_fake)
+
+        d_loss = 0.5 * (d_loss_real + d_loss_fake)
+
+        # Train Generator
+
+        noise = generate_latent_points(latent_dim, batch_size)
+        y_gan = np.ones((batch_size, 1))  # generator wants output as real
+
+        discriminator.trainable = False
+
+        g_loss = gan_model.train_on_batch(noise, y_gan)
+
+        d_losses.append(d_loss)
+        g_losses.append(g_loss)
+
+        if (epoch + 1) % 100 == 0:
+            print(f"Epoch {epoch+1}/{epochs} | D Loss: {d_loss:.4f} | G Loss: {g_loss:.4f}")
+
+    return d_losses, g_losses
+
+
+# STEP 8: INITIALIZE MODELS
+
+latent_dim = 100
+
+generator = build_generator(latent_dim)
+discriminator = build_discriminator()
+gan_model = build_gan(generator, discriminator, latent_dim)
+
+
+# STEP 9: TRAIN MODEL
+
+print("Training GAN...")
+d_losses, g_losses = train_gan(generator, discriminator, gan_model,
+                              latent_dim, epochs=1000, batch_size=64)
+
+
+# STEP 10: GENERATE IMAGES
+
+noise = generate_latent_points(latent_dim, 25)
+generated_images = generator.predict(noise, verbose=0)
+
+# Convert back to [0,1]
+generated_images = (generated_images + 1) / 2.0
+
+plt.figure(figsize=(5, 5))
+
+for i in range(25):
+    plt.subplot(5, 5, i+1)
+    plt.imshow(generated_images[i, :, :, 0], cmap='gray')
+    plt.axis('off')
+
+plt.suptitle("Generated MNIST Digits")
+plt.show()
+
+
+# STEP 11: PLOT LOSS GRAPH
+
+plt.plot(d_losses, label='Discriminator Loss')
+plt.plot(g_losses, label='Generator Loss')
+plt.xlabel('Epoch')
+plt.ylabel('Loss')
+plt.title('GAN Training Performance')
+plt.legend()
 plt.show()
