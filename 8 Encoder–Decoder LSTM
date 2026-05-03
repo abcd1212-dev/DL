@@ -1,0 +1,150 @@
+# Import required libraries
+
+# TensorFlow for building neural network models
+import tensorflow as tf
+
+# Layers and model API
+from tensorflow.keras import layers, models
+
+# NumPy for numerical operations
+import numpy as np
+
+
+# LOAD MNIST DATASET
+
+# MNIST contains 28x28 grayscale images of digits
+# Labels are not used because this is not a classification task
+(X_train, _), (X_test, _) = tf.keras.datasets.mnist.load_data()
+
+
+# NORMALIZE DATA
+
+# Convert pixel values from range [0,255] → [0,1]
+# This helps the model train faster and more stably
+X_train = X_train / 255.0
+
+
+# RESHAPE DATA
+
+# Convert each image into a sequence
+# Each row (28 pixels) is treated as one time step
+# Final shape: (samples, 28 time steps, 28 features)
+X_train = X_train.reshape(-1, 28, 28)
+
+
+# PREPARE ENCODER AND DECODER DATA
+
+# Encoder input: first half of image (rows 0–13)
+# This is what the model "reads"
+encoder_input = X_train[:, :14, :]
+
+# Decoder target: second half of image (rows 14–27)
+# This is what the model needs to predict
+decoder_target = X_train[:, 14:, :]
+
+
+# Decoder input is shifted version of target
+
+# Create empty array of same shape as decoder_target
+decoder_input = np.zeros_like(decoder_target)
+
+# Shift target by one step
+# This helps the decoder learn sequence generation step-by-step
+decoder_input[:, 1:, :] = decoder_target[:, :-1, :]
+
+
+# DEFINE MODEL PARAMETERS
+
+# Number of LSTM units (size of hidden state)
+latent_dim = 64
+
+
+# ENCODER
+
+# Input layer for encoder
+# Shape = (14 time steps, 28 features)
+encoder_inputs = layers.Input(shape=(14, 28))
+
+# LSTM processes the sequence and returns final hidden states
+encoder_lstm = layers.LSTM(latent_dim, return_state=True)
+
+# Output is ignored (_), only states are kept
+_, state_h, state_c = encoder_lstm(encoder_inputs)
+
+# These states carry information of input sequence
+encoder_states = [state_h, state_c]
+
+
+# DECODER
+
+# Input layer for decoder
+# Shape = (14 time steps, 28 features)
+decoder_inputs = layers.Input(shape=(14, 28))
+
+# LSTM decoder
+# return_sequences=True → outputs at every time step
+# return_state=True → also returns hidden states
+decoder_lstm = layers.LSTM(latent_dim, return_sequences=True, return_state=True)
+
+# Decoder uses encoder states as initial memory
+decoder_outputs, _, _ = decoder_lstm(
+    decoder_inputs,
+    initial_state=encoder_states
+)
+
+
+# OUTPUT LAYER
+
+# Dense layer predicts pixel values for each time step
+# Sigmoid activation keeps output between 0 and 1
+decoder_dense = layers.Dense(28, activation='sigmoid')
+
+# Apply dense layer to decoder outputs
+decoder_outputs = decoder_dense(decoder_outputs)
+
+
+# CREATE MODEL
+
+# Model takes encoder input and decoder input
+# Outputs predicted sequence
+model = models.Model([encoder_inputs, decoder_inputs], decoder_outputs)
+
+
+# COMPILE MODEL
+
+# optimizer='adam' → efficient weight updates
+# loss='mse' → used because we predict pixel values (regression task)
+model.compile(
+    optimizer='adam',
+    loss='mse'
+)
+
+
+# TRAIN MODEL
+
+# Model learns to predict second half from first half
+model.fit(
+    [encoder_input, decoder_input],
+    decoder_target,
+    epochs=5,
+    batch_size=128
+)
+
+
+# TEST MODEL
+
+# Take one sample image
+sample = X_train[0:1]
+
+# First half goes to encoder
+enc_in = sample[:, :14, :]
+
+# Decoder starts with zeros (no prior output)
+dec_in = np.zeros((1, 14, 28))
+
+# Predict second half
+prediction = model.predict([enc_in, dec_in])
+
+
+# Print shape of predicted output
+print("\nPredicted second half shape:", prediction.shape)
