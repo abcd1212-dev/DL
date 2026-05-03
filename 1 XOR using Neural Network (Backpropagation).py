@@ -1,59 +1,124 @@
-#XOR 
+# Import NumPy library
+# Used for arrays, matrix multiplication, and mathematical functions
 import numpy as np
 
-# Sigmoid activation function → converts values to 00range (0,1)
-sig = lambda x: 1/(1+np.exp(-x))
 
-# Derivative of sigmoid → used in backpropagation
-dsig = lambda x: x*(1-x)
+# Define Sigmoid Activation Function
+# Formula = 1 / (1 + e^-x)
+# Converts any input value into range 0 to 1
+# Used to introduce non-linearity in neural network
+def sig(x):
+    return 1 / (1 + np.exp(-x))
 
-# XOR input dataset (4 combinations)
+
+# Derivative of Sigmoid Function
+# Formula = x * (1 - x)
+# Required during backpropagation to update weights
+# Here x is already sigmoid output
+def dsig(x):
+    return x * (1 - x)
+
+
+# XOR Input Dataset
 X = np.array([[0,0],
               [0,1],
               [1,0],
               [1,1]])
 
-# Expected output
-y =  np.array([[0],
+
+# Expected XOR Output
+# XOR gives 1 when inputs are different
+# XOR gives 0 when inputs are same
+y = np.array([[0],
               [1],
               [1],
               [0]])
 
-# Initialize weights randomly
+
+# Set random seed
+# Gives same random weights every time program runs
 np.random.seed(1)
 
-w1 = np.random.rand(2,2)   # w1 → weights from input → hidden layer
-w2 = np.random.rand(2,1)   # w2 → weights from hidden → output layer
+
+# Initialize first weight matrix
+# Connects Input Layer to Hidden Layer
+# 2 input neurons and 2 hidden neurons
+# Shape = (2 x 2)
+w1 = np.random.rand(2,2)
+
+
+# Initialize second weight matrix
+# Connects Hidden Layer to Output Layer
+# 2 hidden neurons and 1 output neuron
+# Shape = (2 x 1)
+w2 = np.random.rand(2,1)
+
+
+# Learning rate  Controls speed of weight updates
+lr = 0.1
+
 
 # Training loop
-for _ in range(10000):
-
-    # -------- FORWARD PROPAGATION --------
-
-    h = sig(X @ w1)        # h → hidden layer output
-                           # Input X multiplied by weights w1
-
-    o = sig(h @ w2)        # o → final output (prediction)
-                           # Hidden output multiplied by w2
-
-    # -------- BACKPROPAGATION --------
-
-    d2 = (y - o) * dsig(o)   # d2 → output layer error
-                             # difference between actual (y) and predicted (o)
-
-    d1 = d2 @ w2.T * dsig(h) # d1 → hidden layer error
-                             # backpropagated error from output layer,@ wordis matrix Multiplication
-
-    # -------- WEIGHT UPDATE --------
-
-    w2 += h.T @ d2 * 0.1     # update weights from hidden → output
-    w1 += X.T @ d1 * 0.1     # update weights from input → hidden
+# Run network 10000 times to learn XOR pattern
+for epoch in range(10000):
 
 
-# Final prediction
-print("Final Output:")
+    # Hidden Layer Calculation
+    # Multiply input matrix X with weights w1
+    # Then apply sigmoid activation
+    # @ means matrix multiplication
+    h = sig(X @ w1)
+
+
+    # Output Layer Calculation
+    # Multiply hidden output h with weights w2
+    # Then apply sigmoid activation
+    # Gives final predicted output
+    o = sig(h @ w2)
+
+
+    # Output Layer Error
+    # (Actual output - Predicted output)
+    # Multiply with derivative of sigmoid
+    # Used to know how much correction needed
+    d2 = (y - o) * dsig(o)
+
+
+    # Hidden Layer Error
+    # Backpropagate output error to hidden layer
+    # w2.T = transpose of w2
+    # Multiply with derivative of hidden layer output
+    d1 = d2 @ w2.T * dsig(h)
+
+
+    # Update weights from Hidden to Output layer
+    # h.T = transpose of hidden output
+    # Weight change = hidden_output × error × learning rate
+    w2 += h.T @ d2 * lr
+
+
+    # Update weights from Input to Hidden layer
+    # X.T = transpose of input matrix
+    # Weight change = input × hidden_error × learning rate
+    w1 += X.T @ d1 * lr
+
+
+# Print final predicted decimal outputs
+print("Final Predicted Output:")
 print(o)
 
+
+# Convert decimal outputs into binary values
+# If output >= 0.5 then 1
+# Else 0
+binary_output = (o >= 0.5).astype(int)
+
+
+# Print final binary XOR answers
+print("\nBinary Output:")
+
+for val in binary_output.flatten():
+    print(val)
 
 
 
