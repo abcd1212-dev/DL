@@ -1,0 +1,102 @@
+# 1.TensorFlow / Keras MNIST Classification
+
+import tensorflow as tf
+from tensorflow.keras import layers, models
+
+# Load dataset
+(X_train, y_train), (X_test, y_test) = tf.keras.datasets.mnist.load_data()
+
+# Normalize
+X_train, X_test = X_train / 255.0, X_test / 255.0
+
+# Build model
+model = models.Sequential([
+    layers.Flatten(input_shape=(28,28)),
+    layers.Dense(128, activation='relu'),
+    layers.Dense(10, activation='softmax')
+])
+
+# Compile
+model.compile(optimizer='adam',
+              loss='sparse_categorical_crossentropy',
+              metrics=['accuracy'])
+
+# Train
+model.fit(X_train, y_train, epochs=3)
+
+# Evaluate
+print("Accuracy:", model.evaluate(X_test, y_test)[1])
+
+
+
+# 2.MXNet MNIST Classification
+
+from mxnet import gluon, nd
+from mxnet.gluon import nn
+from mxnet import autograd
+
+# Simple dataset
+X = nd.random.uniform(shape=(1000, 784))
+y = nd.random.randint(0, 10, shape=(1000,))
+
+# Model
+net = nn.Sequential()
+net.add(nn.Dense(128, activation='relu'),
+        nn.Dense(10))
+net.initialize()
+
+# Loss and trainer
+loss_fn = gluon.loss.SoftmaxCrossEntropyLoss()
+trainer = gluon.Trainer(net.collect_params(), 'adam')
+
+# Training loop
+for epoch in range(3):
+    with autograd.record():
+        output = net(X)
+        loss = loss_fn(output, y)
+    loss.backward()
+    trainer.step(batch_size=1000)
+
+
+# 3.JAX Simple Neural Network
+
+import jax.numpy as jnp
+from jax import grad
+
+# Dummy data
+X = jnp.ones((100, 10))
+y = jnp.ones((100, 1))
+
+# Initialize weights
+w = jnp.ones((10,1))
+
+# Forward function
+def predict(w, X):
+    return jnp.dot(X, w)
+
+# Loss function
+def loss(w, X, y):
+    preds = predict(w, X)
+    return jnp.mean((preds - y)**2)
+
+# Gradient
+grad_fn = grad(loss)
+
+# Training
+for i in range(100):
+    w = w - 0.01 * grad_fn(w, X, y)
+
+print("Training done")
+
+
+# 4.Hugging Face Text Classification
+
+from transformers import pipeline
+
+# Pretrained model
+classifier = pipeline("sentiment-analysis")
+
+# Test
+result = classifier("I love deep learning")
+
+print(result)
