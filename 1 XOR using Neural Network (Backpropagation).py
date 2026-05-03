@@ -104,6 +104,7 @@ for epoch in range(10000):
 
 
 # Print final predicted decimal outputs
+print("\n===== XOR OUTPUT =====")
 print("Final Predicted Output:")
 print(o)
 
@@ -117,8 +118,8 @@ binary_output = (o >= 0.5).astype(int)
 # Print final binary XOR answers
 print("\nBinary Output:")
 
-for val in binary_output.flatten():
-    print(val)
+for i, val in enumerate(binary_output):
+    print(X[i], "->", val[0])
 
 
 
@@ -139,6 +140,8 @@ def AND(x1, x2):
 
     # apply activation function
     return step(net)
+
+print("\n===== AND GATE =====")
 
 # Testing all input combinations
 for x1 in [0,1]:
@@ -163,6 +166,8 @@ def OR(x1, x2):
 
     # activation
     return step(net)
+
+print("\n===== OR GATE =====")
 
 # Testing all combinations
 for x1 in [0,1]:
