@@ -1,4 +1,4 @@
-# Import Sequential model from Keras
+# Import Sequential model from Keras 
 # Sequential model is used when layers are arranged one after another
 from tensorflow.keras.models import Sequential
 
@@ -15,6 +15,10 @@ from tensorflow.keras.datasets import fashion_mnist
 
 # Import matplotlib for plotting graphs
 import matplotlib.pyplot as plt
+
+# Import plot_model function
+# Used to display model diagram visually (required for part b)
+from tensorflow.keras.utils import plot_model
 
 
 # Load dataset
@@ -81,6 +85,14 @@ model.compile(optimizer='adam',
 model.summary()
 
 
+# Plot graphical structure of model
+# show_shapes=True shows input and output dimensions
+# show_layer_names=True shows names of layers
+plot_model(model,
+           show_shapes=True,
+           show_layer_names=True)
+
+
 # Train the model
 # epochs=20 means complete dataset passes through model 20 times
 # validation_split=0.1 means 10% training data used for validation
@@ -105,4 +117,4 @@ plt.xlabel("Epoch Number")
 plt.ylabel("Accuracy")
 plt.legend(["Training", "Validation"])
 
-plt.show()
+plt.show()           
